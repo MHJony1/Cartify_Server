@@ -1,0 +1,22 @@
+model Product {
+  id          String   @id @default(uuid()) @map("id")
+  name        String   @map("name")
+  description String?  @map("description")
+  price       Float    @map("price")
+  slug        String   @unique @map("slug")
+  image       String?  @map("image")
+  stock       Int      @map("stock")
+  categoryId  String   @map("category_id")
+  isDeleted   Boolean  @default(false) @map("is_deleted")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  reviews    Review[]
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+
+  @@index([categoryId])
+  @@index([isDeleted])
+  @@map("products")
+}

@@ -1,0 +1,21 @@
+model User {
+  id        String   @id @default(uuid()) @map("id")
+  name      String   @map("name")
+  email     String   @unique @map("email")
+  password  String   @map("password")
+  image     String?  @map("image")
+  role      UserRole @default(USER) @map("role")
+  status    String   @default("INACTIVE") @map("status")
+  isDeleted Boolean  @default(false) @map("is_deleted")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  orders  Order[]
+  reviews Review[]
+  cartItems CartItem[]
+
+  @@index([role])
+  @@index([status])
+  @@index([isDeleted])
+  @@map("users")
+}

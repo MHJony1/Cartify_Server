@@ -1,0 +1,42 @@
+model Order {
+  id          String @id @default(uuid()) @map("id")
+  userId      String @map("user_id")
+  user        User   @relation(fields: [userId], references: [id])
+  totalAmount Float  @map("total")
+  status      OrderStatus @default(PENDING) @map("status")
+  paymentStatus PaymentStatus @default(PENDING) @map("payment_status")
+  paymentMethod PaymentMethod @default(COD) @map("payment_method")
+  shippingAddress String @map("shipping_address")
+  isDeleted   Boolean @default(false) @map("is_deleted")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  items OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([isDeleted])
+
+  @@map("orders")  
+}
+
+
+model OrderItem {
+  id        String  @id @default(uuid()) @map("id")
+  orderId   String  @map("order_id")
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int     @map("quantity")
+  price     Float   @map("price")
+  isDeleted Boolean @default(false) @map("is_deleted")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([orderId, productId])
+  @@index([productId])
+  @@index([isDeleted])
+
+  @@map("order_items")
+}

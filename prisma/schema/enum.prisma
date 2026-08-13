@@ -1,0 +1,34 @@
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+
+enum PaymentMethod {
+  COD
+  ONLINE
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
