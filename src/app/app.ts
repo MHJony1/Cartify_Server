@@ -1,6 +1,8 @@
 import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import router from "./routes";
+import { notFound } from "./middleware/notFound";
+import { globalErrorHandler } from "./middleware/globalErrorHandler";
 
 const app = express();
 
@@ -12,13 +14,10 @@ app.use("/api/v1", router);
 
 
 
-app.use((error: any, req: Request, res: Response, next: NextFunction) => {
-  const statusCode = error.statusCode || 500;
-  res.status(statusCode).json({
-    success: false,
-    message: error.message || "Something went wrong",
-  });
-});
+app.use(notFound);
+
+app.use(globalErrorHandler);
+
 
 export default app;
 
