@@ -3,6 +3,7 @@ import { Router } from 'express';
 import * as categoryController from './category.controller';
 import { validateRequest } from '@/app/middleware/validateRequest';
 import { auth } from '@/app/middleware/auth';
+import { authorize } from '@/app/middleware/role';
 import { UserRole } from '@/generated/prisma/enums';
 
 import {
@@ -14,7 +15,8 @@ const router = Router();
 
 router.post(
   '/',
-  auth(UserRole.ADMIN),
+  auth,
+  authorize(UserRole.ADMIN),
   validateRequest(createCategorySchema),
   categoryController.createCategory,
 );
@@ -25,11 +27,12 @@ router.get('/:id', categoryController.getCategoryById);
 
 router.patch(
   '/:id',
-  auth(UserRole.ADMIN),
+  auth,
+  authorize(UserRole.ADMIN),
   validateRequest(updateCategorySchema),
   categoryController.updateCategory,
 );
 
-router.delete('/:id', auth(UserRole.ADMIN), categoryController.deleteCategory);
+router.delete('/:id', auth, authorize(UserRole.ADMIN), categoryController.deleteCategory);
 
 export default router;

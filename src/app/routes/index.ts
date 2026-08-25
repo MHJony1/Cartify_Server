@@ -1,6 +1,8 @@
 import { Router } from "express";
 import categoryRouter from "@/app/modules/categories/category.route";
 import userRouter from "@/app/modules/users/user.route";
+import productRouter from "@/app/modules/products/product.route";
+
 
 const router = Router();
 
@@ -14,5 +16,6 @@ router.get("/", (req, res) => {
 
 router.use("/categories", categoryRouter);
 router.use("/auth", userRouter);
+router.use("/products",productRouter);
 
 export default router;
