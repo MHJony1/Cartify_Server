@@ -31,6 +31,30 @@ async function main() {
   console.log(`Successfully created admin user: ${admin.email}`);
 }
 
+const testUserEmail = 'testuser1@gmail.com';
+
+const existingUser = await prisma.user.findUnique({
+  where: { email: testUserEmail }
+});
+
+if (!existingUser) {
+  const hashedPassword = await bcrypt.hash('12345678', 10);
+
+  const user = await prisma.user.create({
+    data: {
+      name: 'Test User',
+      email: testUserEmail,
+      password: hashedPassword,
+      role: UserRole.USER,
+      status: 'ACTIVE',
+    }
+  });
+
+  console.log(`Successfully created test user: ${user.email}`);
+} else {
+  console.log('Test user already exists. Skipping seed.');
+}
+
 main()
   .catch((e) => {
     console.error(e);

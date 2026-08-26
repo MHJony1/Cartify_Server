@@ -8,20 +8,24 @@ import * as productService
   from "./product.service";
 
 
-  export const createProduct = async (
+export const createProduct = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const result =
-      await productService.createProduct(
-        req.body
-      );
+    const isBulk = Array.isArray(req.body);
+    const result = isBulk
+      ? await productService.createManyProducts(req.body)
+      : await productService.createProduct(req.body);
+
+    const message = Array.isArray(result)
+      ? `${result.length} products created successfully`
+      : "Product created successfully";
 
     res.status(201).json({
       success: true,
-      message: "Product created successfully",
+      message,
       data: result,
     });
   } catch (error) {
@@ -36,8 +40,9 @@ export const getProducts = async (
   next: NextFunction
 ) => {
   try {
-    const result =
-      await productService.getProducts();
+    const result = await productService.getProducts(
+      req.query
+    );
 
     res.status(200).json({
       success: true,
@@ -48,7 +53,6 @@ export const getProducts = async (
     next(error);
   }
 };
-
 
 export const getProductById = async (
   req: Request,
