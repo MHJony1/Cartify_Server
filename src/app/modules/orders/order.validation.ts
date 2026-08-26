@@ -7,22 +7,28 @@ export const createOrderValidationSchema = z.object({
       .array(
         z.object({
           productId: z.string().min(1, "Product ID is required"),
-
           quantity: z
             .number()
             .int("Quantity must be an integer")
             .positive("Quantity must be greater than 0"),
         })
       )
-      .min(1, "Order must contain at least one product"),
+      .optional(),
 
     shippingAddress: z
       .string()
-      .min(5, "Shipping address is required"),
+      .min(5, "Shipping address is required")
+      .optional(),
+
+    addressId: z.string().optional(),
+    couponCode: z.string().optional(),
 
     paymentMethod: z
       .enum(["COD", "ONLINE"])
       .optional(),
+  }).refine((data) => data.shippingAddress || data.addressId, {
+    message: "Either shippingAddress or addressId must be provided",
+    path: ["addressId"],
   }),
 });
 

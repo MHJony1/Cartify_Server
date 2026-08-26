@@ -7,8 +7,10 @@ export interface IOrderItem {
 }
 
 export interface ICreateOrder {
-  items: IOrderItem[];
-  shippingAddress: string;
+  items?: IOrderItem[];
+  shippingAddress?: string;
+  addressId?: string;
+  couponCode?: string;
   paymentMethod?: PaymentMethod;
 }
 

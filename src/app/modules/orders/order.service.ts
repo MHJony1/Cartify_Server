@@ -10,135 +10,151 @@ const createOrder = async (
   userId: string,
   payload: ICreateOrder
 ) => {
-  const {
-    items,
-    shippingAddress,
-    paymentMethod = "COD",
-  } = payload;
-
   return prisma.$transaction(async (tx) => {
     // 1. Check user
-    const user = await tx.user.findUnique({
-      where: {
-        id: userId,
-      },
-    });
-
-    if (!user) {
-      throw new Error("User not found");
+    const user = await tx.user.findUnique({ where: { id: userId } });
+    if (!user || user.isDeleted || user.status !== "ACTIVE") {
+      throw new Error("User not found or inactive");
     }
 
-    if (user.isDeleted) {
-      throw new Error("User account is deleted");
+    // 2. Resolve items
+    let orderItemsInput: { productId: string; quantity: number }[] = [];
+    let fromCart = false;
+
+    if (payload.items && payload.items.length > 0) {
+      orderItemsInput = payload.items;
+    } else {
+      const cartItems = await tx.cartItem.findMany({
+        where: { userId, isDeleted: false },
+      });
+      if (cartItems.length === 0) {
+        throw new Error("Order must contain at least one product (cart is empty)");
+      }
+      orderItemsInput = cartItems.map(c => ({ productId: c.productId, quantity: c.quantity }));
+      fromCart = true;
     }
 
-    if (user.status !== "ACTIVE") {
-      throw new Error("User account is not active");
+    // Check duplicate products
+    const productIds = orderItemsInput.map(item => item.productId);
+    if (new Set(productIds).size !== productIds.length) {
+      throw new Error("Duplicate products are not allowed in the same order");
     }
 
-    // 2. Check duplicate products
-    const productIds = items.map(
-      (item) => item.productId
-    );
-
-    const uniqueProductIds = new Set(productIds);
-
-    if (uniqueProductIds.size !== productIds.length) {
-      throw new Error(
-        "Duplicate products are not allowed in the same order"
-      );
+    // 3. Resolve Address
+    let finalShippingAddress = payload.shippingAddress;
+    if (payload.addressId) {
+      const address = await tx.address.findUnique({
+        where: { id: payload.addressId, userId, isDeleted: false },
+      });
+      if (!address) throw new Error("Address not found");
+      finalShippingAddress = `${address.name}, ${address.phone}, ${address.addressLine}, ${address.area}, ${address.district}, ${address.division} - ${address.postalCode}`;
     }
 
-    // 3. Get products
+    if (!finalShippingAddress) {
+      throw new Error("Shipping address is required");
+    }
+
+    // 4. Get products & Check stock
     const products = await tx.product.findMany({
-      where: {
-        id: {
-          in: productIds,
-        },
-        isDeleted: false,
-      },
+      where: { id: { in: productIds }, isDeleted: false },
     });
-
-    // 4. Check all products exist
-    if (products.length !== items.length) {
-      throw new Error(
-        "One or more products not found"
-      );
+    if (products.length !== orderItemsInput.length) {
+      throw new Error("One or more products not found");
     }
 
-    // 5. Check stock
-    for (const item of items) {
-      const product = products.find(
-        (p) => p.id === item.productId
-      );
-
-      if (!product) {
-        throw new Error(
-          `Product ${item.productId} not found`
-        );
-      }
-
+    let subtotal = 0;
+    const orderItemsData = orderItemsInput.map((item) => {
+      const product = products.find((p) => p.id === item.productId)!;
       if (product.stock < item.quantity) {
-        throw new Error(
-          `Insufficient stock for ${product.name}`
-        );
+        throw new Error(`Insufficient stock for ${product.name}`);
       }
-    }
-
-    // 6. Calculate total and prepare order items
-    let totalAmount = 0;
-
-    const orderItems = items.map((item) => {
-      const product = products.find(
-        (p) => p.id === item.productId
-      )!;
-
-      const itemTotal =
-        product.price * item.quantity;
-
-      totalAmount += itemTotal;
-
-      return {
-        productId: product.id,
-        quantity: item.quantity,
-        price: product.price,
-      };
+      subtotal += product.price * item.quantity;
+      return { productId: product.id, quantity: item.quantity, price: product.price };
     });
 
-    // 7. Create order
+    // 5. Apply Coupon
+    let discountAmount = 0;
+    let appliedCouponId = null;
+
+    if (payload.couponCode) {
+      const coupon = await tx.coupon.findUnique({
+        where: { code: payload.couponCode, isDeleted: false, isActive: true },
+      });
+
+      if (!coupon) throw new Error("Coupon not found or inactive");
+      const now = new Date();
+      if (now < coupon.startDate || now > coupon.endDate) throw new Error("Coupon is expired or not active");
+      if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) throw new Error("Coupon usage limit reached");
+      
+      const userUsage = await tx.couponUsage.count({
+        where: { couponId: coupon.id, userId },
+      });
+      if (userUsage >= coupon.perUserLimit) throw new Error("You have reached the usage limit for this coupon");
+      if (coupon.minOrderAmount && subtotal < coupon.minOrderAmount) throw new Error(`Minimum order amount of ${coupon.minOrderAmount} required`);
+
+      if (coupon.discountType === "PERCENTAGE") {
+        discountAmount = (subtotal * coupon.discountValue) / 100;
+        if (coupon.maxDiscountAmount && discountAmount > coupon.maxDiscountAmount) discountAmount = coupon.maxDiscountAmount;
+      } else {
+        discountAmount = coupon.discountValue;
+      }
+      
+      if (discountAmount > subtotal) discountAmount = subtotal;
+      appliedCouponId = coupon.id;
+    }
+
+    const totalAmount = subtotal - discountAmount;
+    const paymentMethod = payload.paymentMethod || "COD";
+
+    // 6. Create order
     const order = await tx.order.create({
       data: {
         userId,
+        subtotal,
+        discountAmount,
         totalAmount,
-        shippingAddress,
+        shippingAddress: finalShippingAddress,
         paymentMethod,
-
-        items: {
-          create: orderItems,
-        },
+        couponId: appliedCouponId,
+        items: { create: orderItemsData },
       },
-
-      include: {
-        items: {
-          include: {
-            product: true,
-          },
-        },
-      },
+      include: { items: { include: { product: true } } },
     });
 
-    // 8. Reduce product stock
-    for (const item of items) {
-      await tx.product.update({
-        where: {
-          id: item.productId,
-        },
+    // 7. Create Payment record
+    await tx.payment.create({
+      data: {
+        orderId: order.id,
+        userId,
+        amount: totalAmount,
+        method: paymentMethod as any,
+        status: "PENDING",
+      }
+    });
 
-        data: {
-          stock: {
-            decrement: item.quantity,
-          },
-        },
+    // 8. Record coupon usage
+    if (appliedCouponId) {
+      await tx.couponUsage.create({
+        data: { couponId: appliedCouponId, userId, orderId: order.id },
+      });
+      await tx.coupon.update({
+        where: { id: appliedCouponId },
+        data: { usedCount: { increment: 1 } },
+      });
+    }
+
+    // 9. Reduce product stock
+    for (const item of orderItemsInput) {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { decrement: item.quantity } },
+      });
+    }
+
+    // 10. Clear cart if used
+    if (fromCart) {
+      await tx.cartItem.deleteMany({
+        where: { userId, productId: { in: productIds } },
       });
     }
 

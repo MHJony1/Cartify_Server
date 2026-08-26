@@ -7,11 +7,17 @@ model Order {
   paymentStatus PaymentStatus @default(PENDING) @map("payment_status")
   paymentMethod PaymentMethod @default(COD) @map("payment_method")
   shippingAddress String @map("shipping_address")
+  subtotal    Float? @map("subtotal")
+  discountAmount Float? @map("discount_amount")
+  couponId    String? @map("coupon_id")
+  coupon      Coupon? @relation(fields: [couponId], references: [id])
   isDeleted   Boolean @default(false) @map("is_deleted")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   items OrderItem[]
+  couponUsages CouponUsage[]
+  payments Payment[]
 
   @@index([userId])
   @@index([status])

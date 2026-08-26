@@ -13,6 +13,10 @@ model User {
   orders  Order[]
   reviews Review[]
   cartItems CartItem[]
+  addresses Address[]
+  wishlistItems WishlistItem[]
+  couponUsages CouponUsage[]
+  payments Payment[]
 
   @@index([role])
   @@index([status])

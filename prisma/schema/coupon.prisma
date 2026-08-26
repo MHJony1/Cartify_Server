@@ -1,0 +1,41 @@
+model Coupon {
+  id               String       @id @default(uuid()) @map("id")
+  code             String       @unique @map("code")
+  description      String?      @map("description")
+  discountType     DiscountType @map("discount_type")
+  discountValue    Float        @map("discount_value")
+  minOrderAmount   Float        @default(0) @map("min_order_amount")
+  maxDiscountAmount Float?      @map("max_discount_amount")
+  startDate        DateTime     @map("start_date")
+  endDate          DateTime     @map("end_date")
+  usageLimit       Int?         @map("usage_limit")
+  usedCount        Int          @default(0) @map("used_count")
+  perUserLimit     Int          @default(1) @map("per_user_limit")
+  isActive         Boolean      @default(true) @map("is_active")
+  isDeleted        Boolean      @default(false) @map("is_deleted")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  couponUsages CouponUsage[]
+  orders       Order[]
+
+  @@index([code])
+  @@index([isActive])
+  @@index([isDeleted])
+  @@map("coupons")
+}
+
+model CouponUsage {
+  id        String   @id @default(uuid()) @map("id")
+  couponId  String   @map("coupon_id")
+  coupon    Coupon   @relation(fields: [couponId], references: [id])
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  orderId   String   @map("order_id")
+  order     Order    @relation(fields: [orderId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([couponId, orderId])
+  @@index([couponId, userId])
+  @@map("coupon_usages")
+}

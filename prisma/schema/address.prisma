@@ -1,0 +1,20 @@
+model Address {
+  id          String   @id @default(uuid()) @map("id")
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id])
+  name        String   @map("name")
+  phone       String   @map("phone")
+  division    String   @map("division")
+  district    String   @map("district")
+  area        String   @map("area")
+  addressLine String   @map("address_line")
+  postalCode  String   @map("postal_code")
+  isDefault   Boolean  @default(false) @map("is_default")
+  isDeleted   Boolean  @default(false) @map("is_deleted")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([isDeleted])
+  @@map("addresses")
+}

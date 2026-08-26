@@ -6,6 +6,11 @@ import { orderRoutes } from "../modules/orders/order.route";
 import { cartRoutes } from "../modules/carts/cart.route";
 import { reviewRoutes } from "../modules/reviews/review.route";
 
+import { addressRoutes } from "../modules/addresses/address.route";
+import { wishlistRoutes } from "../modules/wishlist/wishlist.route";
+import { couponRoutes } from "../modules/coupons/coupon.route";
+import { paymentRoutes } from "../modules/payments/payment.route";
+
 const router = Router();
 
 router.get("/", (req, res) => {
@@ -15,11 +20,15 @@ router.get("/", (req, res) => {
   });
 });
 
-
 router.use("/categories", categoryRouter);
 router.use("/auth", userRouter);
-router.use("/products",productRouter);
-router.use("/orders",orderRoutes);
+router.use("/products", productRouter);
+router.use("/orders", orderRoutes);
 router.use("/cart", cartRoutes);
 router.use("/reviews", reviewRoutes);
+router.use("/addresses", addressRoutes);
+router.use("/wishlist", wishlistRoutes);
+router.use("/coupons", couponRoutes);
+router.use("/payments", paymentRoutes);
+
 export default router;
