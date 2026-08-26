@@ -1,0 +1,18 @@
+model InventoryTransaction {
+  id            String                   @id @default(uuid()) @map("id")
+  productId     String                   @map("product_id")
+  product       Product                  @relation(fields: [productId], references: [id])
+  type          InventoryTransactionType @map("type")
+  quantity      Int                      @map("quantity")
+  previousStock Int                      @map("previous_stock")
+  newStock      Int                      @map("new_stock")
+  reference     String?                  @map("reference")
+  note          String?                  @map("note")
+  createdAt     DateTime                 @default(now()) @map("created_at")
+  updatedAt     DateTime                 @updatedAt @map("updated_at")
+
+  @@index([productId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("inventory_transactions")
+}

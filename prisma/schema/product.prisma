@@ -16,6 +16,7 @@ model Product {
   orderItems OrderItem[]
   cartItems  CartItem[]
   wishlistItems WishlistItem[]
+  inventoryTransactions InventoryTransaction[]
 
   @@index([categoryId])
   @@index([isDeleted])

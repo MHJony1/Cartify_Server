@@ -10,6 +10,7 @@ import { addressRoutes } from "../modules/addresses/address.route";
 import { wishlistRoutes } from "../modules/wishlist/wishlist.route";
 import { couponRoutes } from "../modules/coupons/coupon.route";
 import { paymentRoutes } from "../modules/payments/payment.route";
+import { inventoryRoutes } from "../modules/inventory/inventory.route";
 
 const router = Router();
 
@@ -20,15 +21,53 @@ router.get("/", (req, res) => {
   });
 });
 
-router.use("/categories", categoryRouter);
-router.use("/auth", userRouter);
-router.use("/products", productRouter);
-router.use("/orders", orderRoutes);
-router.use("/cart", cartRoutes);
-router.use("/reviews", reviewRoutes);
-router.use("/addresses", addressRoutes);
-router.use("/wishlist", wishlistRoutes);
-router.use("/coupons", couponRoutes);
-router.use("/payments", paymentRoutes);
+const moduleRoutes = [
+  {
+    path: "/auth",
+    route: userRouter,
+  },
+  {
+    path: "/categories",
+    route: categoryRouter,
+  },
+  {
+    path: "/products",
+    route: productRouter,
+  },
+  {
+    path: "/carts",
+    route: cartRoutes,
+  },
+  {
+    path: "/orders",
+    route: orderRoutes,
+  },
+  {
+    path: "/reviews",
+    route: reviewRoutes,
+  },
+  {
+    path: "/addresses",
+    route: addressRoutes,
+  },
+  {
+    path: "/wishlists",
+    route: wishlistRoutes,
+  },
+  {
+    path: "/coupons",
+    route: couponRoutes,
+  },
+  {
+    path: "/payments",
+    route: paymentRoutes,
+  },
+  {
+    path: "/inventory",
+    route: inventoryRoutes,
+  },
+];
+
+moduleRoutes.forEach((route) => router.use(route.path, route.route));
 
 export default router;

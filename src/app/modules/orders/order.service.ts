@@ -143,11 +143,26 @@ const createOrder = async (
       });
     }
 
-    // 9. Reduce product stock
+    // 9. Reduce product stock and create inventory transaction
     for (const item of orderItemsInput) {
+      const product = products.find((p) => p.id === item.productId)!;
+      const previousStock = product.stock;
+      const newStock = previousStock - item.quantity;
+
       await tx.product.update({
         where: { id: item.productId },
-        data: { stock: { decrement: item.quantity } },
+        data: { stock: newStock },
+      });
+
+      await tx.inventoryTransaction.create({
+        data: {
+          productId: item.productId,
+          type: "SALE",
+          quantity: item.quantity,
+          previousStock,
+          newStock,
+          reference: order.id,
+        },
       });
     }
 
@@ -402,16 +417,31 @@ const cancelOrder = async (orderId: string, userId: string, role: string) => {
       throw new AppError(400, "Order is already cancelled");
     }
 
-    // Restore stock
+    // Restore stock and log inventory transaction
     for (const item of order.items) {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: {
-          stock: {
-            increment: item.quantity,
-          },
-        },
+      const product = await tx.product.findUnique({
+        where: { id: item.productId }
       });
+      if (product) {
+        const previousStock = product.stock;
+        const newStock = previousStock + item.quantity;
+
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: newStock },
+        });
+
+        await tx.inventoryTransaction.create({
+          data: {
+            productId: item.productId,
+            type: "RETURN",
+            quantity: item.quantity,
+            previousStock,
+            newStock,
+            reference: order.id,
+          },
+        });
+      }
     }
 
     // Mark as cancelled

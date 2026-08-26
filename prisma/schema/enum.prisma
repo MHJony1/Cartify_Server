@@ -36,4 +36,13 @@ enum UserStatus {
 enum DiscountType {
   PERCENTAGE
   FIXED
+}
+
+enum InventoryTransactionType {
+  PURCHASE
+  SALE
+  RETURN
+  DAMAGE
+  ADJUSTMENT
+  RESTOCK
 }
