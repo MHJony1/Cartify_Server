@@ -93,8 +93,113 @@ const getSingleOrder = async (
   }
 };
 
+const getAllOrders = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await orderService.getAllOrders(
+      req.query
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Orders retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateOrderStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const result = await orderService.updateOrderStatus(
+      id as string,
+      status
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Order status updated successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const cancelOrder = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+      return;
+    }
+
+    const { userId, role } = req.user;
+    const id = req.params.id as string;
+
+    const result = await orderService.cancelOrder(
+      id,
+      userId,
+      role
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Order cancelled successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updatePaymentStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const id = req.params.id as string;
+    const { paymentStatus } = req.body;
+
+    const result = await orderService.updatePaymentStatus(
+      id,
+      paymentStatus
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Payment status updated successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const orderController = {
   createOrder,
   getMyOrders,
-  getSingleOrder
+  getSingleOrder,
+  getAllOrders,
+  updateOrderStatus,
+  cancelOrder,
+  updatePaymentStatus,
 };

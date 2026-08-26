@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OrderStatus, PaymentStatus } from "@/generated/prisma/enums";
 
 export const createOrderValidationSchema = z.object({
   body: z.object({
@@ -24,3 +25,25 @@ export const createOrderValidationSchema = z.object({
       .optional(),
   }),
 });
+
+export const updateOrderStatusSchema = z.object({
+  body: z.object({
+    status: z.nativeEnum(OrderStatus, {
+      message: "Invalid order status",
+    }),
+  }),
+});
+
+export const updatePaymentStatusSchema = z.object({
+  body: z.object({
+    paymentStatus: z.nativeEnum(PaymentStatus, {
+      message: "Invalid payment status",
+    }),
+  }),
+});
+
+export const orderValidation = {
+  createOrderValidationSchema,
+  updateOrderStatusSchema,
+  updatePaymentStatusSchema,
+};

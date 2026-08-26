@@ -15,3 +15,15 @@ export interface ICreateOrder {
 export interface IUpdateOrder {
   status: OrderStatus;
 }
+
+export interface IOrderQuery {
+  page?: number;
+  limit?: number;
+
+  status?: string;
+  paymentStatus?: string;
+  paymentMethod?: string;
+
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
