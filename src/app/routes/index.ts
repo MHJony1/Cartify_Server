@@ -11,6 +11,7 @@ import { wishlistRoutes } from "../modules/wishlist/wishlist.route";
 import { couponRoutes } from "../modules/coupons/coupon.route";
 import { paymentRoutes } from "../modules/payments/payment.route";
 import { inventoryRoutes } from "../modules/inventory/inventory.route";
+import { adminRoutes } from "../modules/admin/admin.route";
 
 const router = Router();
 
@@ -65,6 +66,10 @@ const moduleRoutes = [
   {
     path: "/inventory",
     route: inventoryRoutes,
+  },
+  {
+    path: "/admin",
+    route: adminRoutes,
   },
 ];
 
