@@ -1,6 +1,9 @@
 import { prisma } from "@/app/lib/prisma";
 import { IPaymentCreate } from "./payment.interface";
 import { AppError } from "@/app/errors/AppError";
+import { NotificationService } from "../notifications/notification.service";
+import { emailService } from "../../utils/email.service";
+import { NotificationType } from "@/generated/prisma/enums";
 
 const createPayment = async (userId: string, payload: IPaymentCreate) => {
   const order = await prisma.order.findUnique({
@@ -104,8 +107,44 @@ const updatePaymentStatus = async (id: string, status: any) => {
       data: { paymentStatus: orderPaymentStatus as any },
     });
 
+    if (status === "PAID" || status === "COMPLETED") {
+      await tx.notification.create({
+        data: {
+          userId: payment.userId,
+          title: "Payment Successful",
+          message: `Your payment for order #${payment.orderId} was successful.`,
+          type: NotificationType.PAYMENT,
+        },
+      });
+    } else if (status === "FAILED") {
+      await tx.notification.create({
+        data: {
+          userId: payment.userId,
+          title: "Payment Failed",
+          message: `Your payment for order #${payment.orderId} has failed.`,
+          type: NotificationType.PAYMENT,
+        },
+      });
+
+      await NotificationService.notifyAdmins(
+        "Payment Failed",
+        `Payment failed for order #${payment.orderId}.`,
+        NotificationType.PAYMENT
+      );
+    }
+
     return updatedPayment;
   });
+
+  const user = await prisma.user.findUnique({ where: { id: payment.userId } });
+  if (user) {
+    await emailService.sendPaymentStatusEmail(
+      user.email,
+      user.name,
+      payment.orderId,
+      status
+    );
+  }
 
   return result;
 };

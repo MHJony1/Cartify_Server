@@ -45,4 +45,15 @@ enum InventoryTransactionType {
   DAMAGE
   ADJUSTMENT
   RESTOCK
-}
+}
+
+enum NotificationType {
+  ORDER
+  PAYMENT
+  SHIPPING
+  DELIVERY
+  REVIEW
+  PRODUCT
+  INVENTORY
+  SYSTEM
+}

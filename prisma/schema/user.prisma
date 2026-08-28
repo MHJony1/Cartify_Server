@@ -17,6 +17,7 @@ model User {
   wishlistItems WishlistItem[]
   couponUsages CouponUsage[]
   payments Payment[]
+  notifications Notification[]
 
   @@index([role])
   @@index([status])

@@ -12,6 +12,7 @@ import { couponRoutes } from "../modules/coupons/coupon.route";
 import { paymentRoutes } from "../modules/payments/payment.route";
 import { inventoryRoutes } from "../modules/inventory/inventory.route";
 import { adminRoutes } from "../modules/admin/admin.route";
+import { notificationRoutes } from "../modules/notifications/notification.route";
 
 const router = Router();
 
@@ -70,6 +71,10 @@ const moduleRoutes = [
   {
     path: "/admin",
     route: adminRoutes,
+  },
+  {
+    path: "/notifications",
+    route: notificationRoutes,
   },
 ];
 

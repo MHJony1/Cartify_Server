@@ -1,7 +1,9 @@
 import { prisma } from "../../lib/prisma";
 import { ICreateOrder, IOrderQuery } from "./order.interface";
-import { OrderStatus, PaymentStatus, UserRole } from "@/generated/prisma/enums";
+import { OrderStatus, PaymentStatus, UserRole, NotificationType } from "@/generated/prisma/enums";
 import { AppError } from "../../errors/AppError";
+import { NotificationService } from "../notifications/notification.service";
+import { emailService } from "../../utils/email.service";
 
 // ==============================
 // Create Order
@@ -10,7 +12,7 @@ const createOrder = async (
   userId: string,
   payload: ICreateOrder
 ) => {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     // 1. Check user
     const user = await tx.user.findUnique({ where: { id: userId } });
     if (!user || user.isDeleted || user.status !== "ACTIVE") {
@@ -173,8 +175,56 @@ const createOrder = async (
       });
     }
 
-    return order;
+    // 11. Create Notifications
+    await tx.notification.create({
+      data: {
+        userId,
+        title: "Order Confirmed",
+        message: `Your order #${order.id} has been placed successfully.`,
+        type: NotificationType.ORDER,
+      },
+    });
+
+    // Low stock notifications
+    for (const item of orderItemsInput) {
+      const product = products.find((p) => p.id === item.productId)!;
+      const newStock = product.stock - item.quantity;
+      if (newStock === 0) {
+        await NotificationService.notifyAdmins(
+          "Out of Stock",
+          `Product "${product.name}" is now out of stock.`,
+          NotificationType.INVENTORY
+        );
+      } else if (newStock <= 5) {
+        await NotificationService.notifyAdmins(
+          "Low Stock Alert",
+          `Product "${product.name}" is running low on stock. Only ${newStock} items remaining.`,
+          NotificationType.INVENTORY
+        );
+      }
+    }
+
+    // Admin Notification for new order
+    await NotificationService.notifyAdmins(
+      "New Order Received",
+      `A new order #${order.id} has been placed for $${totalAmount.toFixed(2)}.`,
+      NotificationType.ORDER
+    );
+
+    return { order, user };
   });
+
+  // 12. Send Email (Outside transaction to not block/rollback if it fails)
+  await emailService.sendOrderConfirmationEmail(
+    result.user.email,
+    result.user.name,
+    result.order.id,
+    result.order.totalAmount,
+    result.order.createdAt,
+    result.order.items
+  );
+
+  return result.order;
 };
 
 // ==============================
@@ -386,7 +436,38 @@ const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
   const updatedOrder = await prisma.order.update({
     where: { id: orderId },
     data: { status },
+    include: { user: true },
   });
+
+  let title = "Order Status Updated";
+  let message = `Your order #${orderId} status has been updated to ${status}.`;
+  let type: NotificationType = NotificationType.ORDER;
+
+  if (status === OrderStatus.SHIPPED) {
+    title = "Order Shipped";
+    message = `Your order #${orderId} has been shipped.`;
+    type = NotificationType.SHIPPING;
+  } else if (status === OrderStatus.DELIVERED) {
+    title = "Order Delivered";
+    message = `Your order #${orderId} has been delivered.`;
+    type = NotificationType.DELIVERY;
+  }
+
+  await prisma.notification.create({
+    data: {
+      userId: updatedOrder.userId,
+      title,
+      message,
+      type,
+    },
+  });
+
+  await emailService.sendOrderStatusEmail(
+    updatedOrder.user.email,
+    updatedOrder.user.name,
+    orderId,
+    status
+  );
 
   return updatedOrder;
 };
@@ -395,7 +476,7 @@ const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
 // Cancel Order
 // ==============================
 const cancelOrder = async (orderId: string, userId: string, role: string) => {
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const order = await tx.order.findUnique({
       where: { id: orderId, isDeleted: false },
       include: { items: true },
@@ -448,10 +529,29 @@ const cancelOrder = async (orderId: string, userId: string, role: string) => {
     const updatedOrder = await tx.order.update({
       where: { id: orderId },
       data: { status: OrderStatus.CANCELLED },
+      include: { user: true },
+    });
+
+    await tx.notification.create({
+      data: {
+        userId: updatedOrder.userId,
+        title: "Order Cancelled",
+        message: `Your order #${orderId} has been cancelled.`,
+        type: NotificationType.ORDER,
+      },
     });
 
     return updatedOrder;
   });
+
+  await emailService.sendOrderStatusEmail(
+    result.user.email,
+    result.user.name,
+    orderId,
+    OrderStatus.CANCELLED
+  );
+
+  return result;
 };
 
 // ==============================
