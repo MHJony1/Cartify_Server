@@ -16,7 +16,7 @@ const createOrder = async (
     // 1. Check user
     const user = await tx.user.findUnique({ where: { id: userId } });
     if (!user || user.isDeleted || user.status !== "ACTIVE") {
-      throw new Error("User not found or inactive");
+      throw new AppError(400, "User not found or inactive");
     }
 
     // 2. Resolve items
@@ -30,7 +30,7 @@ const createOrder = async (
         where: { userId, isDeleted: false },
       });
       if (cartItems.length === 0) {
-        throw new Error("Order must contain at least one product (cart is empty)");
+        throw new AppError(400, "Order must contain at least one product (cart is empty)");
       }
       orderItemsInput = cartItems.map(c => ({ productId: c.productId, quantity: c.quantity }));
       fromCart = true;
@@ -39,7 +39,7 @@ const createOrder = async (
     // Check duplicate products
     const productIds = orderItemsInput.map(item => item.productId);
     if (new Set(productIds).size !== productIds.length) {
-      throw new Error("Duplicate products are not allowed in the same order");
+      throw new AppError(400, "Duplicate products are not allowed in the same order");
     }
 
     // 3. Resolve Address
@@ -48,12 +48,12 @@ const createOrder = async (
       const address = await tx.address.findUnique({
         where: { id: payload.addressId, userId, isDeleted: false },
       });
-      if (!address) throw new Error("Address not found");
+      if (!address) throw new AppError(404, "Address not found");
       finalShippingAddress = `${address.name}, ${address.phone}, ${address.addressLine}, ${address.area}, ${address.district}, ${address.division} - ${address.postalCode}`;
     }
 
     if (!finalShippingAddress) {
-      throw new Error("Shipping address is required");
+      throw new AppError(400, "Shipping address is required");
     }
 
     // 4. Get products & Check stock
@@ -61,14 +61,14 @@ const createOrder = async (
       where: { id: { in: productIds }, isDeleted: false },
     });
     if (products.length !== orderItemsInput.length) {
-      throw new Error("One or more products not found");
+      throw new AppError(400, "One or more products not found");
     }
 
     let subtotal = 0;
     const orderItemsData = orderItemsInput.map((item) => {
       const product = products.find((p) => p.id === item.productId)!;
       if (product.stock < item.quantity) {
-        throw new Error(`Insufficient stock for ${product.name}`);
+        throw new AppError(400, `Insufficient stock for ${product.name}`);
       }
       subtotal += product.price * item.quantity;
       return { productId: product.id, quantity: item.quantity, price: product.price };
@@ -76,23 +76,24 @@ const createOrder = async (
 
     // 5. Apply Coupon
     let discountAmount = 0;
-    let appliedCouponId = null;
+    let appliedCouponId: string | null = null;
+    let appliedCouponUsageLimit: number | null = null;
 
     if (payload.couponCode) {
       const coupon = await tx.coupon.findUnique({
         where: { code: payload.couponCode, isDeleted: false, isActive: true },
       });
 
-      if (!coupon) throw new Error("Coupon not found or inactive");
+      if (!coupon) throw new AppError(404, "Coupon not found or inactive");
       const now = new Date();
-      if (now < coupon.startDate || now > coupon.endDate) throw new Error("Coupon is expired or not active");
-      if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) throw new Error("Coupon usage limit reached");
+      if (now < coupon.startDate || now > coupon.endDate) throw new AppError(400, "Coupon is expired or not active");
+      if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) throw new AppError(400, "Coupon usage limit reached");
       
       const userUsage = await tx.couponUsage.count({
         where: { couponId: coupon.id, userId },
       });
-      if (userUsage >= coupon.perUserLimit) throw new Error("You have reached the usage limit for this coupon");
-      if (coupon.minOrderAmount && subtotal < coupon.minOrderAmount) throw new Error(`Minimum order amount of ${coupon.minOrderAmount} required`);
+      if (userUsage >= coupon.perUserLimit) throw new AppError(400, "You have reached the usage limit for this coupon");
+      if (coupon.minOrderAmount && subtotal < coupon.minOrderAmount) throw new AppError(400, `Minimum order amount of ${coupon.minOrderAmount} required`);
 
       if (coupon.discountType === "PERCENTAGE") {
         discountAmount = (subtotal * coupon.discountValue) / 100;
@@ -103,6 +104,7 @@ const createOrder = async (
       
       if (discountAmount > subtotal) discountAmount = subtotal;
       appliedCouponId = coupon.id;
+      appliedCouponUsageLimit = coupon.usageLimit;
     }
 
     const totalAmount = subtotal - discountAmount;
@@ -139,22 +141,36 @@ const createOrder = async (
       await tx.couponUsage.create({
         data: { couponId: appliedCouponId, userId, orderId: order.id },
       });
-      await tx.coupon.update({
-        where: { id: appliedCouponId },
+      const { count } = await tx.coupon.updateMany({
+        where: { 
+          id: appliedCouponId,
+          OR: [
+            { usageLimit: null },
+            { usedCount: { lt: appliedCouponUsageLimit! } }
+          ]
+        },
         data: { usedCount: { increment: 1 } },
       });
+      if (count === 0) {
+        throw new AppError(400, "Coupon usage limit reached during checkout");
+      }
     }
 
     // 9. Reduce product stock and create inventory transaction
     for (const item of orderItemsInput) {
       const product = products.find((p) => p.id === item.productId)!;
       const previousStock = product.stock;
-      const newStock = previousStock - item.quantity;
-
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: newStock },
+      
+      const { count } = await tx.product.updateMany({
+        where: { id: item.productId, stock: { gte: item.quantity } },
+        data: { stock: { decrement: item.quantity } },
       });
+
+      if (count === 0) {
+        throw new AppError(400, `Insufficient stock for ${product.name}`);
+      }
+      
+      const newStock = previousStock - item.quantity;
 
       await tx.inventoryTransaction.create({
         data: {
@@ -505,12 +521,13 @@ const cancelOrder = async (orderId: string, userId: string, role: string) => {
       });
       if (product) {
         const previousStock = product.stock;
-        const newStock = previousStock + item.quantity;
 
-        await tx.product.update({
+        const updatedProduct = await tx.product.update({
           where: { id: item.productId },
-          data: { stock: newStock },
+          data: { stock: { increment: item.quantity } },
         });
+        
+        const newStock = updatedProduct.stock;
 
         await tx.inventoryTransaction.create({
           data: {

@@ -30,7 +30,7 @@ export const getAllCategories = async () => {
 export const getCategoryById = async (id: string) => {
   const category = await prisma.category.findFirst({
     where: { id, isDeleted: false },
-    include: { products: true },
+    include: { _count: { select: { products: true } } },
   });
 
   if (!category) throw new Error("Category Not Found");

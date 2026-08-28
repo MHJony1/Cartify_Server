@@ -41,7 +41,8 @@ export const globalErrorHandler = (
     statusCode = 400;
     message = "Invalid data provided";
   } else if (err instanceof Error) {
-    message = err.message;
+    console.error("Internal Server Error:", err);
+    message = process.env.NODE_ENV === "development" ? err.message : "Something went wrong";
   }
 
   res.status(statusCode).json({

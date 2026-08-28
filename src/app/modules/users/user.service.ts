@@ -76,11 +76,24 @@ export const loginUser = async (payload: ILoginUser) => {
   };
 };
 
+const selectWithoutPassword = {
+  id: true,
+  name: true,
+  email: true,
+  image: true,
+  role: true,
+  status: true,
+  isDeleted: true,
+  createdAt: true,
+  updatedAt: true,
+};
+
 export const getAllUser = async () => {
   const allUser = await prisma.user.findMany({
     where: {
       isDeleted: false,
     },
+    select: selectWithoutPassword,
   });
   return allUser;
 };
@@ -91,6 +104,7 @@ const getSingleUser = async (id: string) => {
       id: id,
       isDeleted: false,
     },
+    select: selectWithoutPassword,
   });
   return singleUser;
 };
@@ -101,6 +115,7 @@ const updateSignleUser = async (id: string, payload: IUpdateUser) => {
       id: id,
     },
     data: payload,
+    select: selectWithoutPassword,
   });
   if (!updateUser) {
     throw new AppError(500, 'User Update Failed');
@@ -116,6 +131,7 @@ const deleteSingleUser = async (id: string) => {
     data: {
       isDeleted: true,
     },
+    select: selectWithoutPassword,
   });
   if (!deleteUser) {
     throw new AppError(500, 'User Deletion Failed');

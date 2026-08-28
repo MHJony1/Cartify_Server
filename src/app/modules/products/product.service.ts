@@ -82,8 +82,12 @@ export const getProducts = async (
     sortOrder = "desc",
   } = query;
 
-  const pageNumber = Number(page);
-  const limitNumber = Number(limit);
+  let pageNumber = Number(page);
+  let limitNumber = Number(limit);
+
+  if (pageNumber < 1 || isNaN(pageNumber)) pageNumber = 1;
+  if (limitNumber < 1 || isNaN(limitNumber)) limitNumber = 10;
+  if (limitNumber > 100) limitNumber = 100;
 
   const minPriceNumber =
     minPrice !== undefined
@@ -281,9 +285,12 @@ export const deleteProduct = async (
   }
 
   const product =
-    await prisma.product.delete({
+    await prisma.product.update({
       where: {
         id,
+      },
+      data: {
+        isDeleted: true,
       },
     });
 
