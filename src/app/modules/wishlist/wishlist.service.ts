@@ -47,15 +47,35 @@ const getMyWishlist = async (userId: string) => {
           name: true,
           slug: true,
           price: true,
-          image: true,
-          stock: true,
           category: true,
+          variants: true,
+          images: {
+            where: { isPrimary: true },
+            take: 1,
+          },
         },
       },
     },
     orderBy: { createdAt: "desc" },
   });
-  return result;
+  
+  return result.map(item => {
+    const product = item.product;
+    const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
+    return {
+      ...item,
+      product: {
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        image: product.images[0]?.url || null,
+        category: product.category,
+        stock: totalStock,
+        variants: product.variants,
+      }
+    };
+  });
 };
 
 const removeFromWishlist = async (userId: string, productId: string) => {
@@ -96,7 +116,11 @@ const moveToCart = async (userId: string, productId: string) => {
     throw new AppError(404, "Product not found");
   }
 
-  if (product.stock < 1) {
+  const variant = await prisma.productVariant.findFirst({
+    where: { productId, stock: { gt: 0 }, isDeleted: false },
+  });
+
+  if (!variant) {
     throw new AppError(400, "Product is out of stock");
   }
 
@@ -104,7 +128,7 @@ const moveToCart = async (userId: string, productId: string) => {
     // Upsert CartItem
     const cartItem = await tx.cartItem.findUnique({
       where: {
-        userId_productId: { userId, productId },
+        userId_productId_variantId: { userId, productId, variantId: variant.id },
       },
     });
 
@@ -121,6 +145,7 @@ const moveToCart = async (userId: string, productId: string) => {
         data: {
           userId,
           productId,
+          variantId: variant.id,
           quantity: 1,
         },
       });

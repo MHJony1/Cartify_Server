@@ -20,7 +20,7 @@ const createOrder = async (
     }
 
     // 2. Resolve items
-    let orderItemsInput: { productId: string; quantity: number }[] = [];
+    let orderItemsInput: { productId: string; variantId: string; quantity: number }[] = [];
     let fromCart = false;
 
     if (payload.items && payload.items.length > 0) {
@@ -32,7 +32,7 @@ const createOrder = async (
       if (cartItems.length === 0) {
         throw new AppError(400, "Order must contain at least one product (cart is empty)");
       }
-      orderItemsInput = cartItems.map(c => ({ productId: c.productId, quantity: c.quantity }));
+      orderItemsInput = cartItems.map(c => ({ productId: c.productId, variantId: c.variantId, quantity: c.quantity }));
       fromCart = true;
     }
 
@@ -56,22 +56,32 @@ const createOrder = async (
       throw new AppError(400, "Shipping address is required");
     }
 
-    // 4. Get products & Check stock
-    const products = await tx.product.findMany({
-      where: { id: { in: productIds }, isDeleted: false },
+    // 4. Get variants & Check stock
+    const variantIds = orderItemsInput.map(item => item.variantId);
+    const variants = await tx.productVariant.findMany({
+      where: { id: { in: variantIds }, isDeleted: false },
+      include: { product: true }
     });
-    if (products.length !== orderItemsInput.length) {
-      throw new AppError(400, "One or more products not found");
+    if (variants.length !== orderItemsInput.length) {
+      throw new AppError(400, "One or more product variants not found");
     }
 
     let subtotal = 0;
     const orderItemsData = orderItemsInput.map((item) => {
-      const product = products.find((p) => p.id === item.productId)!;
-      if (product.stock < item.quantity) {
-        throw new AppError(400, `Insufficient stock for ${product.name}`);
+      const variant = variants.find((v) => v.id === item.variantId)!;
+      if (variant.stock < item.quantity) {
+        throw new AppError(400, `Insufficient stock for ${variant.product.name}`);
       }
-      subtotal += product.price * item.quantity;
-      return { productId: product.id, quantity: item.quantity, price: product.price };
+      subtotal += variant.price * item.quantity;
+      return { 
+        productId: variant.productId, 
+        variantId: variant.id, 
+        variantSize: variant.size,
+        variantColor: variant.color,
+        variantSku: variant.sku,
+        quantity: item.quantity, 
+        price: variant.price 
+      };
     });
 
     // 5. Apply Coupon
@@ -156,18 +166,18 @@ const createOrder = async (
       }
     }
 
-    // 9. Reduce product stock and create inventory transaction
+    // 9. Reduce variant stock and create inventory transaction
     for (const item of orderItemsInput) {
-      const product = products.find((p) => p.id === item.productId)!;
-      const previousStock = product.stock;
+      const variant = variants.find((v) => v.id === item.variantId)!;
+      const previousStock = variant.stock;
       
-      const { count } = await tx.product.updateMany({
-        where: { id: item.productId, stock: { gte: item.quantity } },
+      const { count } = await tx.productVariant.updateMany({
+        where: { id: item.variantId, stock: { gte: item.quantity } },
         data: { stock: { decrement: item.quantity } },
       });
 
       if (count === 0) {
-        throw new AppError(400, `Insufficient stock for ${product.name}`);
+        throw new AppError(400, `Insufficient stock for ${variant.product.name}`);
       }
       
       const newStock = previousStock - item.quantity;
@@ -175,6 +185,7 @@ const createOrder = async (
       await tx.inventoryTransaction.create({
         data: {
           productId: item.productId,
+          variantId: item.variantId,
           type: "SALE",
           quantity: item.quantity,
           previousStock,
@@ -186,8 +197,9 @@ const createOrder = async (
 
     // 10. Clear cart if used
     if (fromCart) {
+      const variantIdsToDelete = orderItemsInput.map(item => item.variantId);
       await tx.cartItem.deleteMany({
-        where: { userId, productId: { in: productIds } },
+        where: { userId, variantId: { in: variantIdsToDelete } },
       });
     }
 
@@ -203,18 +215,18 @@ const createOrder = async (
 
     // Low stock notifications
     for (const item of orderItemsInput) {
-      const product = products.find((p) => p.id === item.productId)!;
-      const newStock = product.stock - item.quantity;
+      const variant = variants.find((v) => v.id === item.variantId)!;
+      const newStock = variant.stock - item.quantity;
       if (newStock === 0) {
         await NotificationService.notifyAdmins(
           "Out of Stock",
-          `Product "${product.name}" is now out of stock.`,
+          `Product variant "${variant.product.name}" is now out of stock.`,
           NotificationType.INVENTORY
         );
       } else if (newStock <= 5) {
         await NotificationService.notifyAdmins(
           "Low Stock Alert",
-          `Product "${product.name}" is running low on stock. Only ${newStock} items remaining.`,
+          `Product variant "${variant.product.name}" is running low on stock. Only ${newStock} items remaining.`,
           NotificationType.INVENTORY
         );
       }
@@ -380,7 +392,7 @@ const getAllOrders = async (
             select: {
               id: true,
               name: true,
-              image: true,
+              images: true,
             },
           },
         },
@@ -516,22 +528,23 @@ const cancelOrder = async (orderId: string, userId: string, role: string) => {
 
     // Restore stock and log inventory transaction
     for (const item of order.items) {
-      const product = await tx.product.findUnique({
-        where: { id: item.productId }
+      const variant = await tx.productVariant.findUnique({
+        where: { id: item.variantId }
       });
-      if (product) {
-        const previousStock = product.stock;
+      if (variant) {
+        const previousStock = variant.stock;
 
-        const updatedProduct = await tx.product.update({
-          where: { id: item.productId },
+        const updatedVariant = await tx.productVariant.update({
+          where: { id: item.variantId },
           data: { stock: { increment: item.quantity } },
         });
         
-        const newStock = updatedProduct.stock;
+        const newStock = updatedVariant.stock;
 
         await tx.inventoryTransaction.create({
           data: {
             productId: item.productId,
+            variantId: item.variantId,
             type: "RETURN",
             quantity: item.quantity,
             previousStock,

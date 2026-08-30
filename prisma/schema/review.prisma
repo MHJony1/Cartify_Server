@@ -10,10 +10,9 @@ model Review {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([userId, productId])
   @@index([userId])
   @@index([productId])
   @@index([isDeleted])
-  @@unique([userId, productId])
-
   @@map("reviews")
 }

@@ -10,13 +10,13 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  orders  Order[]
-  reviews Review[]
-  cartItems CartItem[]
-  addresses Address[]
+  orders        Order[]
+  reviews       Review[]
+  cartItems     CartItem[]
+  addresses     Address[]
   wishlistItems WishlistItem[]
-  couponUsages CouponUsage[]
-  payments Payment[]
+  couponUsages  CouponUsage[]
+  payments      Payment[]
   notifications Notification[]
 
   @@index([role])

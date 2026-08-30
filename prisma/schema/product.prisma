@@ -4,21 +4,64 @@ model Product {
   description String?  @map("description")
   price       Float    @map("price")
   slug        String   @unique @map("slug")
-  image       String?  @map("image")
-  stock       Int      @map("stock")
+  gender      Gender?  @map("gender")
+  material    String?  @map("material")
+  brand       String?  @map("brand")
+  collection  String?  @map("collection")
   categoryId  String   @map("category_id")
   isDeleted   Boolean  @default(false) @map("is_deleted")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   category    Category @relation(fields: [categoryId], references: [id])
 
-  reviews    Review[]
-  orderItems OrderItem[]
-  cartItems  CartItem[]
-  wishlistItems WishlistItem[]
+  images                ProductImage[]
+  variants              ProductVariant[]
+  reviews               Review[]
+  orderItems            OrderItem[]
+  cartItems             CartItem[]
+  wishlistItems         WishlistItem[]
   inventoryTransactions InventoryTransaction[]
 
   @@index([categoryId])
   @@index([isDeleted])
   @@map("products")
+}
+
+model ProductVariant {
+  id             String   @id @default(uuid()) @map("id")
+  productId      String   @map("product_id")
+  product        Product  @relation(fields: [productId], references: [id])
+  size           String   @map("size")
+  color          String   @map("color")
+  sku            String   @unique @map("sku")
+  price          Float    @map("price")
+  stock          Int      @map("stock")
+  compareAtPrice Float?   @map("compare_at_price")
+  isDeleted      Boolean  @default(false) @map("is_deleted")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  cartItems             CartItem[]
+  orderItems            OrderItem[]
+  inventoryTransactions InventoryTransaction[]
+
+  @@index([productId])
+  @@index([sku])
+  @@index([isDeleted])
+  @@map("product_variants")
+}
+
+model ProductImage {
+  id        String   @id @default(uuid()) @map("id")
+  productId String   @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id])
+  url       String   @map("url")
+  altText   String?  @map("alt_text")
+  sortOrder Int      @default(0) @map("sort_order")
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([productId])
+  @@map("product_images")
 }

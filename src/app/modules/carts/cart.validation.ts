@@ -3,6 +3,7 @@ import { z } from "zod";
 export const addToCartSchema = z.object({
   body: z.object({
     productId: z.string().min(1, "Product ID is required"),
+    variantId: z.string().min(1, "Variant ID is required"),
     quantity: z
       .number()
       .int("Quantity must be an integer")

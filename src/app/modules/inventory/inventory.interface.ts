@@ -1,14 +1,17 @@
 export interface IRestock {
+  variantId: string;
   quantity: number;
   note?: string;
 }
 
 export interface IDamage {
+  variantId: string;
   quantity: number;
   note?: string;
 }
 
 export interface IAdjust {
+  variantId: string;
   operation: "INCREASE" | "DECREASE" | "SET";
   quantity: number;
   note?: string;
@@ -25,6 +28,7 @@ export interface IInventoryQuery {
 }
 
 export interface IInventoryHistoryQuery {
+  variantId?: string;
   page?: number | string;
   limit?: number | string;
   type?: string;

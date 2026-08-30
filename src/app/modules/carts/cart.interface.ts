@@ -1,5 +1,6 @@
 export interface IAddToCart {
   productId: string;
+  variantId: string;
   quantity: number;
 }
 

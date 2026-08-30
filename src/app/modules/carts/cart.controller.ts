@@ -72,12 +72,12 @@ const updateCartItemQuantity = async (
     }
 
     const userId = req.user.userId;
-    const { productId } = req.params;
+    const { cartItemId } = req.params;
     const { quantity } = req.body;
 
     const result = await cartService.updateCartItemQuantity(
       userId,
-      productId as string,
+      cartItemId as string,
       quantity
     );
 
@@ -106,9 +106,9 @@ const removeCartItem = async (
     }
 
     const userId = req.user.userId;
-    const { productId } = req.params;
+    const { cartItemId } = req.params;
 
-    const result = await cartService.removeCartItem(userId, productId as string);
+    const result = await cartService.removeCartItem(userId, cartItemId as string);
 
     res.status(200).json({
       success: true,

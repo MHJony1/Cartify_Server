@@ -20,14 +20,14 @@ router.get(
 );
 
 router.patch(
-  "/:productId",
+  "/:cartItemId",
   auth,
   validateRequest(cartValidation.updateCartItemSchema),
   cartController.updateCartItemQuantity
 );
 
 router.delete(
-  "/:productId",
+  "/:cartItemId",
   auth,
   cartController.removeCartItem
 );

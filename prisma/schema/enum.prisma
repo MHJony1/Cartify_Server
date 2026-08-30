@@ -12,6 +12,12 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum Gender {
+  MEN
+  WOMEN
+  KIDS
+  UNISEX
+}
 
 enum PaymentStatus {
   PENDING
@@ -20,7 +26,6 @@ enum PaymentStatus {
   FAILED
   REFUNDED
 }
-
 
 enum PaymentMethod {
   COD

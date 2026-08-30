@@ -26,17 +26,27 @@ export const createProduct = async (
     );
   }
 
+  const { variants, images, ...productData } = payload;
+
   const product = await prisma.product.create({
     data: {
-      ...payload,
-      slug: payload.name
+      ...productData,
+      slug: productData.name
         .toLowerCase()
         .trim()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, ""),
+      variants: {
+        create: variants,
+      },
+      images: images ? {
+        create: images,
+      } : undefined,
     },
     include: {
       category: true,
+      variants: true,
+      images: true,
     },
   });
 
@@ -47,21 +57,30 @@ export const createManyProducts = async (
   payload: ICreateProduct[]
 ) => {
   const result = await prisma.$transaction(
-    payload.map((data) =>
-      prisma.product.create({
+    payload.map((data) => {
+      const { variants, images, ...productData } = data;
+      return prisma.product.create({
         data: {
-          ...data,
-          slug: data.name
+          ...productData,
+          slug: productData.name
             .toLowerCase()
             .trim()
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/(^-|-$)/g, ""),
+          variants: {
+            create: variants,
+          },
+          images: images ? {
+            create: images,
+          } : undefined,
         },
         include: {
           category: true,
+          variants: true,
+          images: true,
         },
-      })
-    )
+      });
+    })
   );
 
   return result;
@@ -148,15 +167,36 @@ export const getProducts = async (
     }
   }
 
-  // Stock filter
+  // Stock filter (now based on variants)
   if (inStockBoolean !== undefined) {
     if (inStockBoolean) {
-      where.stock = {
-        gt: 0,
+      where.variants = {
+        some: {
+          stock: { gt: 0 }
+        }
       };
     } else {
-      where.stock = 0;
+      where.variants = {
+        every: {
+          stock: 0
+        }
+      };
     }
+  }
+
+  // New Filters
+  if (query.gender) where.gender = query.gender;
+  if (query.collection) where.collection = query.collection;
+  
+  if (query.size || query.color) {
+    where.variants = {
+      ...(where.variants || {}),
+      some: {
+        ...(where.variants?.some || {}),
+      }
+    };
+    if (query.size) where.variants.some.size = query.size;
+    if (query.color) where.variants.some.color = query.color;
   }
 
   // Sorting
@@ -169,6 +209,8 @@ export const getProducts = async (
       where,
       include: {
         category: true,
+        variants: true,
+        images: true,
       },
       skip,
       take: limitNumber,
@@ -204,6 +246,8 @@ export const getProductById = async (
     },
     include: {
       category: true,
+      variants: true,
+      images: true,
     },
   });
 
@@ -254,13 +298,17 @@ export const updateProduct = async (
     }
   }
 
+  const { variants, images, ...updateData } = payload;
+
   const product = await prisma.product.update({
     where: {
       id,
     },
-    data: payload,
+    data: updateData,
     include: {
       category: true,
+      variants: true,
+      images: true,
     },
   });
 

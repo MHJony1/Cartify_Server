@@ -36,7 +36,7 @@ const getInventory = async (query: IInventoryQuery) => {
   if (limitNumber < 1 || isNaN(limitNumber)) limitNumber = 10;
   if (limitNumber > 100) limitNumber = 100;
 
-  const allowedSortFields = ["stock", "name", "createdAt", "updatedAt"];
+  const allowedSortFields = ["name", "createdAt", "updatedAt"];
   const validSortBy = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
   const validSortOrder = sortOrder === "asc" ? "asc" : "desc";
 
@@ -64,11 +64,11 @@ const getInventory = async (query: IInventoryQuery) => {
 
   if (stockStatus) {
     if (stockStatus === "OUT_OF_STOCK") {
-      where.stock = { lte: 0 };
+      where.variants = { every: { stock: { lte: 0 } } };
     } else if (stockStatus === "LOW_STOCK") {
-      where.stock = { gt: 0, lte: LOW_STOCK_THRESHOLD };
+      where.variants = { some: { stock: { gt: 0, lte: LOW_STOCK_THRESHOLD } } };
     } else if (stockStatus === "IN_STOCK") {
-      where.stock = { gt: LOW_STOCK_THRESHOLD };
+      where.variants = { some: { stock: { gt: LOW_STOCK_THRESHOLD } } };
     }
   }
 
@@ -80,6 +80,11 @@ const getInventory = async (query: IInventoryQuery) => {
           id: true,
           name: true,
         },
+      },
+      variants: true,
+      images: {
+        where: { isPrimary: true },
+        take: 1,
       },
     },
     skip,
@@ -93,16 +98,20 @@ const getInventory = async (query: IInventoryQuery) => {
   const totalPages = Math.ceil(total / limitNumber);
 
   // Map to inventory format
-  const data = products.map(product => ({
-    productId: product.id,
-    productName: product.name,
-    slug: product.slug,
-    image: product.image,
-    category: product.category,
-    stock: product.stock,
-    lowStockThreshold: LOW_STOCK_THRESHOLD,
-    stockStatus: getStockStatus(product.stock),
-  }));
+  const data = products.map(product => {
+    const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
+    return {
+      productId: product.id,
+      productName: product.name,
+      slug: product.slug,
+      image: product.images[0]?.url || null,
+      category: product.category,
+      stock: totalStock,
+      variants: product.variants,
+      lowStockThreshold: LOW_STOCK_THRESHOLD,
+      stockStatus: getStockStatus(totalStock),
+    };
+  });
 
   return {
     data,
@@ -128,6 +137,8 @@ const getInventoryDetails = async (productId: string) => {
           name: true,
         },
       },
+      variants: true,
+      images: true,
     },
   });
 
@@ -135,15 +146,18 @@ const getInventoryDetails = async (productId: string) => {
     throw new AppError(404, "Product not found or deleted");
   }
 
+  const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
+
   return {
     productId: product.id,
     productName: product.name,
     slug: product.slug,
-    image: product.image,
+    images: product.images,
     category: product.category,
-    stock: product.stock,
+    stock: totalStock,
+    variants: product.variants,
     lowStockThreshold: LOW_STOCK_THRESHOLD,
-    stockStatus: getStockStatus(product.stock),
+    stockStatus: getStockStatus(totalStock),
   };
 };
 
@@ -216,25 +230,26 @@ const getInventoryHistory = async (productId: string, query: IInventoryHistoryQu
 // ==============================
 const restock = async (productId: string, payload: IRestock) => {
   return await prisma.$transaction(async (tx) => {
-    const product = await tx.product.findUnique({
-      where: { id: productId, isDeleted: false },
+    const variant = await tx.productVariant.findUnique({
+      where: { id: payload.variantId, isDeleted: false },
     });
 
-    if (!product) {
-      throw new AppError(404, "Product not found or deleted");
+    if (!variant || variant.productId !== productId) {
+      throw new AppError(404, "Product variant not found or deleted");
     }
 
-    const previousStock = product.stock;
+    const previousStock = variant.stock;
     const newStock = previousStock + payload.quantity;
 
-    const updatedProduct = await tx.product.update({
-      where: { id: productId },
+    const updatedVariant = await tx.productVariant.update({
+      where: { id: variant.id },
       data: { stock: newStock },
     });
 
     await tx.inventoryTransaction.create({
       data: {
         productId,
+        variantId: variant.id,
         type: InventoryTransactionType.RESTOCK,
         quantity: payload.quantity,
         previousStock,
@@ -243,7 +258,7 @@ const restock = async (productId: string, payload: IRestock) => {
       },
     });
 
-    return updatedProduct;
+    return updatedVariant;
   });
 };
 
@@ -252,29 +267,30 @@ const restock = async (productId: string, payload: IRestock) => {
 // ==============================
 const damage = async (productId: string, payload: IDamage) => {
   return await prisma.$transaction(async (tx) => {
-    const product = await tx.product.findUnique({
-      where: { id: productId, isDeleted: false },
+    const variant = await tx.productVariant.findUnique({
+      where: { id: payload.variantId, isDeleted: false },
     });
 
-    if (!product) {
-      throw new AppError(404, "Product not found or deleted");
+    if (!variant || variant.productId !== productId) {
+      throw new AppError(404, "Product variant not found or deleted");
     }
 
-    if (product.stock < payload.quantity) {
+    if (variant.stock < payload.quantity) {
       throw new AppError(400, "Cannot record damage: quantity exceeds current stock");
     }
 
-    const previousStock = product.stock;
+    const previousStock = variant.stock;
     const newStock = previousStock - payload.quantity;
 
-    const updatedProduct = await tx.product.update({
-      where: { id: productId },
+    const updatedVariant = await tx.productVariant.update({
+      where: { id: variant.id },
       data: { stock: newStock },
     });
 
     await tx.inventoryTransaction.create({
       data: {
         productId,
+        variantId: variant.id,
         type: InventoryTransactionType.DAMAGE,
         quantity: payload.quantity,
         previousStock,
@@ -283,7 +299,7 @@ const damage = async (productId: string, payload: IDamage) => {
       },
     });
 
-    return updatedProduct;
+    return updatedVariant;
   });
 };
 
@@ -292,15 +308,15 @@ const damage = async (productId: string, payload: IDamage) => {
 // ==============================
 const adjust = async (productId: string, payload: IAdjust) => {
   return await prisma.$transaction(async (tx) => {
-    const product = await tx.product.findUnique({
-      where: { id: productId, isDeleted: false },
+    const variant = await tx.productVariant.findUnique({
+      where: { id: payload.variantId, isDeleted: false },
     });
 
-    if (!product) {
-      throw new AppError(404, "Product not found or deleted");
+    if (!variant || variant.productId !== productId) {
+      throw new AppError(404, "Product variant not found or deleted");
     }
 
-    const previousStock = product.stock;
+    const previousStock = variant.stock;
     let newStock = previousStock;
     let diff = payload.quantity;
 
@@ -316,14 +332,15 @@ const adjust = async (productId: string, payload: IAdjust) => {
       }
     }
 
-    const updatedProduct = await tx.product.update({
-      where: { id: productId },
+    const updatedVariant = await tx.productVariant.update({
+      where: { id: variant.id },
       data: { stock: newStock },
     });
 
     await tx.inventoryTransaction.create({
       data: {
         productId,
+        variantId: variant.id,
         type: InventoryTransactionType.ADJUSTMENT,
         quantity: diff,
         previousStock,
@@ -332,7 +349,7 @@ const adjust = async (productId: string, payload: IAdjust) => {
       },
     });
 
-    return updatedProduct;
+    return updatedVariant;
   });
 };
 

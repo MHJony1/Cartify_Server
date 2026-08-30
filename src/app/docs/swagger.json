@@ -92,12 +92,6 @@
           "price": {
             "type": "number"
           },
-          "stock": {
-            "type": "number"
-          },
-          "image": {
-            "type": "string"
-          },
           "categoryId": {
             "type": "string"
           },
@@ -107,6 +101,30 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "gender": {
+            "type": "string"
+          },
+          "material": {
+            "type": "string"
+          },
+          "brand": {
+            "type": "string"
+          },
+          "collection": {
+            "type": "string"
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductVariant"
+            }
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductImage"
+            }
           }
         }
       },
@@ -121,6 +139,9 @@
           },
           "quantity": {
             "type": "integer"
+          },
+          "variantId": {
+            "type": "string"
           }
         }
       },
@@ -166,6 +187,35 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": {
+                  "type": "string"
+                },
+                "variantId": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "integer"
+                },
+                "price": {
+                  "type": "number"
+                },
+                "variantSize": {
+                  "type": "string"
+                },
+                "variantColor": {
+                  "type": "string"
+                },
+                "variantSku": {
+                  "type": "string"
+                }
+              }
+            }
           }
         }
       },
@@ -337,6 +387,66 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "ProductVariant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "size": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "stock": {
+            "type": "number"
+          },
+          "compareAtPrice": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ProductImage": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "altText": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "integer"
           }
         }
       }
@@ -917,14 +1027,57 @@
                   "price": {
                     "type": "number"
                   },
-                  "stock": {
-                    "type": "number"
-                  },
-                  "image": {
-                    "type": "string"
-                  },
                   "categoryId": {
                     "type": "string"
+                  },
+                  "gender": {
+                    "type": "string"
+                  },
+                  "material": {
+                    "type": "string"
+                  },
+                  "brand": {
+                    "type": "string"
+                  },
+                  "collection": {
+                    "type": "string"
+                  },
+                  "variants": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "size": {
+                          "type": "string"
+                        },
+                        "color": {
+                          "type": "string"
+                        },
+                        "sku": {
+                          "type": "string"
+                        },
+                        "price": {
+                          "type": "number"
+                        },
+                        "stock": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  },
+                  "images": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string"
+                        },
+                        "isPrimary": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -1274,7 +1427,17 @@
                   "items": {
                     "type": "array",
                     "items": {
-                      "$ref": "#/components/schemas/CartItem"
+                      "$ref": "#/components/schemas/CartItem",
+                      "properties": {
+                        "variantId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "productId",
+                        "variantId",
+                        "quantity"
+                      ]
                     }
                   },
                   "shippingAddress": {

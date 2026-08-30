@@ -89,8 +89,8 @@ const getDashboardOverview = async () => {
     }),
 
     // Inventory metrics using the same threshold as inventory module
-    prisma.product.count({ where: { isDeleted: false, stock: { gt: 0, lte: LOW_STOCK_THRESHOLD } } }),
-    prisma.product.count({ where: { isDeleted: false, stock: { equals: 0 } } }),
+    prisma.productVariant.count({ where: { isDeleted: false, stock: { gt: 0, lte: LOW_STOCK_THRESHOLD } } }),
+    prisma.productVariant.count({ where: { isDeleted: false, stock: { equals: 0 } } }),
 
     prisma.review.count({ where: { isDeleted: false } }),
   ]);
@@ -142,16 +142,16 @@ const getDashboardOverview = async () => {
         status: true,
       },
     }),
-    prisma.product.findMany({
+    prisma.productVariant.findMany({
       where: { isDeleted: false, stock: { lte: LOW_STOCK_THRESHOLD } },
       take: 5,
       orderBy: { stock: "asc" },
       select: {
         id: true,
-        name: true,
         stock: true,
+        product: { select: { name: true } },
       },
-    }),
+    }).then(variants => variants.map(v => ({ id: v.id, name: v.product.name, stock: v.stock }))),
   ]);
 
   return {
@@ -312,8 +312,8 @@ const getProductAnalytics = async (query: IAnalyticsQuery) => {
     prisma.product.count(), // Total regardless of deletion
     prisma.product.count({ where: { isDeleted: false } }),
     prisma.product.count({ where: { isDeleted: true } }),
-    prisma.product.count({ where: { isDeleted: false, stock: { equals: 0 } } }),
-    prisma.product.count({ where: { isDeleted: false, stock: { gt: 0, lte: LOW_STOCK_THRESHOLD } } }),
+    prisma.productVariant.count({ where: { isDeleted: false, stock: { equals: 0 } } }),
+    prisma.productVariant.count({ where: { isDeleted: false, stock: { gt: 0, lte: LOW_STOCK_THRESHOLD } } }),
   ]);
 
   // Determine top selling products from OrderItems (excluding cancelled orders)
@@ -381,9 +381,9 @@ const getInventoryAnalytics = async () => {
     recentMovements
   ] = await Promise.all([
     prisma.product.count({ where: { isDeleted: false } }),
-    prisma.product.aggregate({ _sum: { stock: true }, where: { isDeleted: false } }),
-    prisma.product.count({ where: { isDeleted: false, stock: { gt: 0, lte: LOW_STOCK_THRESHOLD } } }),
-    prisma.product.count({ where: { isDeleted: false, stock: { equals: 0 } } }),
+    prisma.productVariant.aggregate({ _sum: { stock: true }, where: { isDeleted: false } }),
+    prisma.productVariant.count({ where: { isDeleted: false, stock: { gt: 0, lte: LOW_STOCK_THRESHOLD } } }),
+    prisma.productVariant.count({ where: { isDeleted: false, stock: { equals: 0 } } }),
     prisma.inventoryTransaction.findMany({
       take: 10,
       orderBy: { createdAt: "desc" },
