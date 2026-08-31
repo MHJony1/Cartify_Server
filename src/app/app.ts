@@ -5,11 +5,15 @@ import compression from "compression";
 import morgan from "morgan";
 import swaggerUi from "swagger-ui-express";
 import { rateLimit } from "express-rate-limit";
+import cookieParser from "cookie-parser";
 import router from "./routes";
 import { notFound } from "./middleware/notFound";
 import { globalErrorHandler } from "./middleware/globalErrorHandler";
 
 const app = express();
+
+// Parse cookies
+app.use(cookieParser());
 
 // Security headers
 app.use(helmet());

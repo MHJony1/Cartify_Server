@@ -28,6 +28,8 @@ export const registerUser = async (payload: ICreateUser) => {
     data: {
       name: payload.name,
       email: payload.email,
+      phone: payload.phone,
+      image: payload.image,
       password: hashedPassword,
     },
   });
@@ -71,6 +73,67 @@ export const loginUser = async (payload: ILoginUser) => {
       id: user.id,
       email: user.email,
       name: user.name,
+      role: user.role,
+    },
+  };
+};
+
+import { OAuth2Client } from 'google-auth-library';
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+export const googleLoginUser = async (credential: string) => {
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    throw new AppError(500, 'Google OAuth is not configured on the server.');
+  }
+
+  const ticket = await client.verifyIdToken({
+    idToken: credential,
+    audience: process.env.GOOGLE_CLIENT_ID,
+  });
+  
+  const payload = ticket.getPayload();
+  if (!payload || !payload.email) {
+    throw new AppError(401, 'Invalid Google token');
+  }
+
+  const { email, name, picture } = payload;
+
+  let user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+    // Create new user for Google login
+    user = await prisma.user.create({
+      data: {
+        email,
+        name: name || 'Google User',
+        image: picture,
+        // Generate a random password since they use Google
+        password: await bcrypt.hash(Math.random().toString(36).slice(-12) + Date.now().toString(), 10),
+      },
+    });
+  } else if (!user.image && picture) {
+    // Optionally update picture if they didn't have one
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { image: picture },
+    });
+  }
+
+  const token = createToken({
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+  });
+
+  return {
+    accessToken: token,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      image: user.image,
       role: user.role,
     },
   };

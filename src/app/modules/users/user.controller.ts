@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { AppError } from '@/app/errors/AppError';
 
 import * as userService from './user.service';
 
@@ -27,9 +28,49 @@ export const loginUser = async (
 ) => {
   try {
     const result = await userService.loginUser(req.body);
+    
+    // Set HTTP-only cookie
+    res.cookie('accessToken', result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
     res.status(200).json({
       success: true,
       message: 'Login Successful',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const googleLoginUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      throw new AppError(400, 'Google credential is required');
+    }
+
+    const result = await userService.googleLoginUser(credential);
+    
+    // Set HTTP-only cookie
+    res.cookie('accessToken', result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Google Login Successful',
       data: result,
     });
   } catch (error) {
@@ -119,5 +160,30 @@ export const logout = async (req: Request, res: Response) => {
       status: 500,
       message: error.message,
     });
+  }
+};
+
+export const getMe = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const user = (req as any).user;
+    
+    // Fetch full user without password
+    const result = await (userService as any).getSingleUser(user.userId);
+    
+    if (!result) {
+      throw new AppError(404, 'User not found');
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'User retrieved successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
   }
 };

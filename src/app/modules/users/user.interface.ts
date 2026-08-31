@@ -3,6 +3,8 @@ import { UserRole } from '@/generated/prisma/enums';
 export interface ICreateUser {
   name: string;
   email: string;
+  phone?: string;
+  image?: string;
   password: string;
 }
 

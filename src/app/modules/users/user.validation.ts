@@ -10,6 +10,13 @@ export const registerUserSchema = z.object({
       .string()
       .email("Invalid email address"),
 
+    phone: z
+      .string()
+      .min(5, "Phone number is too short")
+      .optional(),
+      
+    image: z.string().url("Invalid image URL").optional(),
+
     password: z
       .string()
       .min(6, "Password must be at least 6 characters"),

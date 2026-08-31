@@ -14,25 +14,20 @@ export const auth = async (
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization;
+    let token = req.cookies?.accessToken;
+    
+    // Fallback to authorization header
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+      }
+    }
 
-    if (!authHeader) {
+    if (!token) {
       throw new AppError(
         401,
         "Authentication required"
-      );
-    }
-
-    const [scheme, token] =
-      authHeader.split(" ");
-
-    if (
-      scheme !== "Bearer" ||
-      !token
-    ) {
-      throw new AppError(
-        401,
-        "Invalid authorization format"
       );
     }
 

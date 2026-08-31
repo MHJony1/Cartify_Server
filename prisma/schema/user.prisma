@@ -2,6 +2,7 @@ model User {
   id        String   @id @default(uuid()) @map("id")
   name      String   @map("name")
   email     String   @unique @map("email")
+  phone     String?  @map("phone")
   password  String   @map("password")
   image     String?  @map("image")
   role      UserRole @default(USER) @map("role")
