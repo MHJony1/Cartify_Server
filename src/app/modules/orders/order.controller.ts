@@ -93,6 +93,26 @@ const getSingleOrder = async (
   }
 };
 
+const adminGetSingleOrder = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+
+    const result = await orderService.adminGetSingleOrder(id as string);
+
+    res.status(200).json({
+      success: true,
+      message: "Order retrieved successfully (Admin)",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getAllOrders = async (
   req: Request,
   res: Response,
@@ -198,6 +218,7 @@ export const orderController = {
   createOrder,
   getMyOrders,
   getSingleOrder,
+  adminGetSingleOrder,
   getAllOrders,
   updateOrderStatus,
   cancelOrder,

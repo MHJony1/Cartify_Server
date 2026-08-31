@@ -320,6 +320,42 @@ const getSingleOrder = async (
 };
 
 // ==============================
+// Get Single Order - Admin
+// ==============================
+const adminGetSingleOrder = async (orderId: string) => {
+  const order = await prisma.order.findUnique({
+    where: {
+      id: orderId,
+      isDeleted: false,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+        },
+      },
+      items: {
+        where: {
+          isDeleted: false,
+        },
+        include: {
+          product: true,
+        },
+      },
+    },
+  });
+
+  if (!order) {
+    throw new AppError(404, "Order not found");
+  }
+
+  return order;
+};
+
+// ==============================
 // Get All Orders - Admin
 // ==============================
 const getAllOrders = async (
@@ -611,6 +647,7 @@ export const orderService = {
   createOrder,
   getMyOrders,
   getSingleOrder,
+  adminGetSingleOrder,
   getAllOrders,
   updateOrderStatus,
   cancelOrder,

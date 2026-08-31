@@ -26,6 +26,14 @@ router.get(
   authorize(UserRole.ADMIN),
   orderController.getAllOrders
 );
+
+router.get(
+  "/admin/:id",
+  auth,
+  authorize(UserRole.ADMIN),
+  orderController.adminGetSingleOrder
+);
+
 router.get(
   "/:id",
   auth,
