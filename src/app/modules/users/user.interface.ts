@@ -13,6 +13,7 @@ export interface IUpdateUser {
   email?: string;
   password?: string;
   phone?: string;
+  image?: string;
 }
 
 export interface ILoginUser {

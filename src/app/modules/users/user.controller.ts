@@ -11,6 +11,14 @@ export const registerUser = async (
   try {
     const result = await userService.registerUser(req.body);
 
+    // Set HTTP-only cookie for auto-login
+    res.cookie('accessToken', result.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
     res.status(201).json({
       success: true,
       message: 'User registered Successfully',
@@ -33,7 +41,7 @@ export const loginUser = async (
     res.cookie('accessToken', result.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -64,7 +72,7 @@ export const googleLoginUser = async (
     res.cookie('accessToken', result.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -150,7 +158,11 @@ export const deleteSingleUser = async (req: Request, res: Response) => {
 };
 export const logout = async (req: Request, res: Response) => {
   try {
-    res.clearCookie('accessToken');
+    res.clearCookie('accessToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    });
     res.json({
       status: 200,
       message: 'User logged out successfully',

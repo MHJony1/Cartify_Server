@@ -31,16 +31,26 @@ export const registerUser = async (payload: ICreateUser) => {
       phone: payload.phone,
       image: payload.image,
       password: hashedPassword,
+      status: "ACTIVE",
     },
   });
 
-  return {
-    id: user.id,
-    name: user.name,
+  const token = createToken({
+    userId: user.id,
     email: user.email,
     role: user.role,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
+  });
+
+  return {
+    accessToken: token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    }
   };
 };
 
@@ -111,6 +121,7 @@ export const googleLoginUser = async (credential: string) => {
         image: picture,
         // Generate a random password since they use Google
         password: await bcrypt.hash(Math.random().toString(36).slice(-12) + Date.now().toString(), 10),
+        status: "ACTIVE",
       },
     });
   } else if (!user.image && picture) {
@@ -172,7 +183,7 @@ const getSingleUser = async (id: string) => {
   return singleUser;
 };
 
-const updateSignleUser = async (id: string, payload: IUpdateUser) => {
+export const updateSingleUser = async (id: string, payload: IUpdateUser) => {
   const updateUser = await prisma.user.update({
     where: {
       id: id,
