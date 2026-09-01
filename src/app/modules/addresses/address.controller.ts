@@ -7,7 +7,7 @@ export const createAddress = async (
   next: NextFunction
 ) => {
   try {
-    const result = await AddressService.createAddress(req.user!.userId, req.body);
+    const result = await AddressService.createAddress(req.user!.id, req.body);
     res.status(201).json({
       success: true,
       message: "Address created successfully",
@@ -24,7 +24,7 @@ export const getMyAddresses = async (
   next: NextFunction
 ) => {
   try {
-    const result = await AddressService.getMyAddresses(req.user!.userId);
+    const result = await AddressService.getMyAddresses(req.user!.id);
     res.status(200).json({
       success: true,
       message: "Addresses retrieved successfully",
@@ -42,7 +42,7 @@ export const getAddressById = async (
 ) => {
   try {
     const { id } = req.params as { id: string };
-    const result = await AddressService.getAddressById(req.user!.userId, id);
+    const result = await AddressService.getAddressById(req.user!.id, id);
     res.status(200).json({
       success: true,
       message: "Address retrieved successfully",
@@ -60,7 +60,7 @@ export const updateAddress = async (
 ) => {
   try {
     const { id } = req.params as { id: string };
-    const result = await AddressService.updateAddress(req.user!.userId, id, req.body);
+    const result = await AddressService.updateAddress(req.user!.id, id, req.body);
     res.status(200).json({
       success: true,
       message: "Address updated successfully",
@@ -78,7 +78,7 @@ export const deleteAddress = async (
 ) => {
   try {
     const { id } = req.params as { id: string };
-    const result = await AddressService.deleteAddress(req.user!.userId, id);
+    const result = await AddressService.deleteAddress(req.user!.id, id);
     res.status(200).json({
       success: true,
       message: "Address deleted successfully",
@@ -96,7 +96,7 @@ export const setDefaultAddress = async (
 ) => {
   try {
     const { id } = req.params as { id: string };
-    const result = await AddressService.setDefaultAddress(req.user!.userId, id);
+    const result = await AddressService.setDefaultAddress(req.user!.id, id);
     res.status(200).json({
       success: true,
       message: "Default address set successfully",

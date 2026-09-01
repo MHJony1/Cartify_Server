@@ -15,7 +15,7 @@ const addToCart = async (
       return;
     }
 
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const result = await cartService.addToCart(userId, req.body);
 
@@ -43,7 +43,7 @@ const getMyCart = async (
       return;
     }
 
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const result = await cartService.getMyCart(userId);
 
@@ -71,7 +71,7 @@ const updateCartItemQuantity = async (
       return;
     }
 
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const { cartItemId } = req.params;
     const { quantity } = req.body;
 
@@ -105,7 +105,7 @@ const removeCartItem = async (
       return;
     }
 
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const { cartItemId } = req.params;
 
     const result = await cartService.removeCartItem(userId, cartItemId as string);
@@ -134,7 +134,7 @@ const clearCart = async (
       return;
     }
 
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const result = await cartService.clearCart(userId);
 

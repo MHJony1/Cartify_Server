@@ -27,3 +27,11 @@ export interface IJwtPayload {
   name: string;
   role: UserRole;
 }
+
+export interface IUserQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  role?: string;
+}

@@ -40,6 +40,7 @@ export const auth = async (
     // Additional database check for security
     const user = await prisma.user.findUnique({
       where: { id: (decoded as any).userId },
+      select: { id: true, email: true, name: true, role: true, status: true, isDeleted: true },
     });
 
     if (!user) {
@@ -54,7 +55,7 @@ export const auth = async (
       throw new AppError(401, "User account is not active");
     }
 
-    Object.assign(req, { user: decoded });
+    Object.assign(req, { user });
 
     next();
   } catch (error) {

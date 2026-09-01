@@ -7,7 +7,7 @@ const getMyNotifications = async (req: Request, res: Response, next: NextFunctio
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
-    const userId = req.user.userId || (req.user as any).id;
+    const userId = req.user.id || (req.user as any).id;
     const result = await NotificationService.getMyNotifications(userId, req.query);
 
     res.status(200).json({
@@ -27,7 +27,7 @@ const getUnreadNotifications = async (req: Request, res: Response, next: NextFun
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
-    const userId = req.user.userId || (req.user as any).id;
+    const userId = req.user.id || (req.user as any).id;
     const result = await NotificationService.getUnreadNotifications(userId);
 
     res.status(200).json({
@@ -46,7 +46,7 @@ const getUnreadNotificationCount = async (req: Request, res: Response, next: Nex
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
-    const userId = req.user.userId || (req.user as any).id;
+    const userId = req.user.id || (req.user as any).id;
     const result = await NotificationService.getUnreadNotificationCount(userId);
 
     res.status(200).json({
@@ -65,7 +65,7 @@ const markNotificationAsRead = async (req: Request, res: Response, next: NextFun
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
-    const userId = req.user.userId || (req.user as any).id;
+    const userId = req.user.id || (req.user as any).id;
     const notificationId = req.params.id as string;
     const result = await NotificationService.markNotificationAsRead(userId, notificationId);
 
@@ -85,7 +85,7 @@ const markAllNotificationsAsRead = async (req: Request, res: Response, next: Nex
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
-    const userId = req.user.userId || (req.user as any).id;
+    const userId = req.user.id || (req.user as any).id;
     const result = await NotificationService.markAllNotificationsAsRead(userId);
 
     res.status(200).json({
@@ -104,7 +104,7 @@ const deleteNotification = async (req: Request, res: Response, next: NextFunctio
       res.status(401).json({ success: false, message: "Unauthorized" });
       return;
     }
-    const userId = req.user.userId || (req.user as any).id;
+    const userId = req.user.id || (req.user as any).id;
     const notificationId = req.params.id as string;
     await NotificationService.deleteNotification(userId, notificationId);
 

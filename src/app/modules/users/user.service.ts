@@ -8,7 +8,9 @@ import {
   ICreateUser,
   IUpdateUser,
   ILoginUser,
+  IUserQuery,
 } from './user.interface';
+import { UserRole } from '@/generated/prisma/enums';
 import { createToken } from '@/app/utils/jwt';
 
 export const registerUser = async (payload: ICreateUser) => {
@@ -172,7 +174,7 @@ export const getAllUser = async () => {
   return allUser;
 };
 
-const getSingleUser = async (id: string) => {
+export const getSingleUser = async (id: string) => {
   const singleUser = await prisma.user.findUnique({
     where: {
       id: id,
@@ -197,7 +199,7 @@ export const updateSingleUser = async (id: string, payload: IUpdateUser) => {
   return updateUser;
 };
 
-const deleteSingleUser = async (id: string) => {
+export const deleteSingleUser = async (id: string) => {
   const deleteUser = await prisma.user.update({
     where: {
       id,
@@ -211,4 +213,132 @@ const deleteSingleUser = async (id: string) => {
     throw new AppError(500, 'User Deletion Failed');
   }
   return deleteUser;
+};
+
+// ==============================
+// Admin: Get All Users (Paginated)
+// ==============================
+export const adminGetAllUsers = async (query: IUserQuery) => {
+  const { page = 1, limit = 10, search, status, role } = query;
+
+  let pageNumber = Number(page);
+  let limitNumber = Number(limit);
+
+  if (pageNumber < 1 || isNaN(pageNumber)) pageNumber = 1;
+  if (limitNumber < 1 || isNaN(limitNumber)) limitNumber = 10;
+  if (limitNumber > 100) limitNumber = 100;
+
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const where: any = {
+    isDeleted: false,
+  };
+
+  if (status) {
+    where.status = status;
+  }
+
+  if (role) {
+    where.role = role;
+  }
+
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+      { phone: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  const users = await prisma.user.findMany({
+    where,
+    skip,
+    take: limitNumber,
+    orderBy: { createdAt: "desc" },
+    select: selectWithoutPassword,
+  });
+
+  const total = await prisma.user.count({ where });
+  const totalPages = Math.ceil(total / limitNumber);
+
+  return {
+    data: users,
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPages,
+    },
+  };
+};
+
+// ==============================
+// Admin: Get Single User
+// ==============================
+export const adminGetSingleUser = async (id: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id, isDeleted: false },
+    select: {
+      ...selectWithoutPassword,
+      _count: {
+        select: { orders: true }
+      },
+      addresses: {
+        where: { isDeleted: false }
+      }
+    }
+  });
+
+  if (!user) throw new AppError(404, "User not found");
+  
+  return user;
+};
+
+// ==============================
+// Admin: Update User Status
+// ==============================
+export const adminUpdateUserStatus = async (adminId: string, userId: string, status: string) => {
+  if (adminId === userId) {
+    throw new AppError(403, "You cannot modify your own account status");
+  }
+
+  const validStatuses = ["ACTIVE", "INACTIVE", "SUSPENDED"];
+  if (!validStatuses.includes(status)) {
+    throw new AppError(400, "Invalid status value");
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId, isDeleted: false } });
+  if (!user) throw new AppError(404, "User not found");
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { status },
+    select: selectWithoutPassword,
+  });
+
+  return updatedUser;
+};
+
+// ==============================
+// Admin: Update User Role
+// ==============================
+export const adminUpdateUserRole = async (adminId: string, userId: string, role: string) => {
+  if (adminId === userId) {
+    throw new AppError(403, "You cannot modify your own role");
+  }
+
+  if (role !== UserRole.ADMIN && role !== UserRole.USER) {
+    throw new AppError(400, "Invalid role value");
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId, isDeleted: false } });
+  if (!user) throw new AppError(404, "User not found");
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { role: role as UserRole },
+    select: selectWithoutPassword,
+  });
+
+  return updatedUser;
 };

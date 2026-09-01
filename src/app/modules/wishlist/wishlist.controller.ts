@@ -8,7 +8,7 @@ export const addToWishlist = async (
 ) => {
   try {
     const { productId } = req.params as { productId: string };
-    const result = await WishlistService.addToWishlist(req.user!.userId, productId);
+    const result = await WishlistService.addToWishlist(req.user!.id, productId);
     res.status(201).json({
       success: true,
       message: "Product added to wishlist successfully",
@@ -25,7 +25,7 @@ export const getMyWishlist = async (
   next: NextFunction
 ) => {
   try {
-    const result = await WishlistService.getMyWishlist(req.user!.userId);
+    const result = await WishlistService.getMyWishlist(req.user!.id);
     res.status(200).json({
       success: true,
       message: "Wishlist retrieved successfully",
@@ -43,7 +43,7 @@ export const removeFromWishlist = async (
 ) => {
   try {
     const { productId } = req.params as { productId: string };
-    const result = await WishlistService.removeFromWishlist(req.user!.userId, productId);
+    const result = await WishlistService.removeFromWishlist(req.user!.id, productId);
     res.status(200).json({
       success: true,
       message: "Product removed from wishlist successfully",
@@ -61,7 +61,7 @@ export const moveToCart = async (
 ) => {
   try {
     const { productId } = req.params as { productId: string };
-    const result = await WishlistService.moveToCart(req.user!.userId, productId);
+    const result = await WishlistService.moveToCart(req.user!.id, productId);
     res.status(200).json({
       success: true,
       message: result.message,

@@ -21,5 +21,13 @@ router.get("/me", auth, userController.getMe);
 router.patch("/:id", auth, validateRequest(updateUserSchema), userController.updateSingleUser);
 // router.delete("/single/:id", userController.deleteSingleUser);
 
+// Admin Routes
+import { authorize } from '@/app/middleware/role';
+import { UserRole } from '@/generated/prisma/enums';
+
+router.get("/admin", auth, authorize(UserRole.ADMIN), userController.adminGetAllUsers);
+router.get("/admin/:id", auth, authorize(UserRole.ADMIN), userController.adminGetSingleUser);
+router.patch("/admin/:id/status", auth, authorize(UserRole.ADMIN), userController.adminUpdateUserStatus);
+router.patch("/admin/:id/role", auth, authorize(UserRole.ADMIN), userController.adminUpdateUserRole);
 
 export default router;

@@ -16,7 +16,7 @@ const createReview = async (
       return;
     }
 
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const result = await reviewService.createReview(userId, req.body);
 
@@ -67,7 +67,7 @@ const getMyReviews = async (
       return;
     }
 
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const result = await reviewService.getMyReviews(userId);
 
@@ -95,7 +95,7 @@ const updateReview = async (
       return;
     }
 
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const { id } = req.params;
 
     const result = await reviewService.updateReview(
@@ -128,7 +128,7 @@ const deleteReview = async (
       return;
     }
 
-    const { userId, role } = req.user;
+    const { id: userId, role } = req.user;
     const { id } = req.params;
 
     const result = await reviewService.deleteReview(

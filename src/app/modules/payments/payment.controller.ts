@@ -7,7 +7,7 @@ export const createPayment = async (
   next: NextFunction
 ) => {
   try {
-    const result = await PaymentService.createPayment(req.user!.userId, req.body);
+    const result = await PaymentService.createPayment(req.user!.id, req.body);
     res.status(201).json({
       success: true,
       message: "Payment created successfully",
@@ -24,7 +24,7 @@ export const getMyPayments = async (
   next: NextFunction
 ) => {
   try {
-    const result = await PaymentService.getMyPayments(req.user!.userId);
+    const result = await PaymentService.getMyPayments(req.user!.id);
     res.status(200).json({
       success: true,
       message: "Payments retrieved successfully",
@@ -42,7 +42,7 @@ export const getPaymentById = async (
 ) => {
   try {
     const { id } = req.params as { id: string };
-    const result = await PaymentService.getPaymentById(req.user!.userId, id);
+    const result = await PaymentService.getPaymentById(req.user!.id, id);
     res.status(200).json({
       success: true,
       message: "Payment retrieved successfully",

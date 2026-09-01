@@ -105,7 +105,7 @@ export const getAllUser = async (req: Request, res: Response) => {
 export const getSingleUser = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
-    const result = await (userService as any).getSingleUser(id);
+    const result = await userService.getSingleUser(id);
 
     res.json({
       status: 200,
@@ -124,7 +124,7 @@ export const updateSingleUser = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
     const userPayload = req.body;
-    const result = await (userService as any).updateSingleUser(id, userPayload);
+    const result = await userService.updateSingleUser(id, userPayload);
 
     res.json({
       status: 200,
@@ -142,7 +142,7 @@ export const updateSingleUser = async (req: Request, res: Response) => {
 export const deleteSingleUser = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
-    const result = await (userService as any).deleteSingleUser(id);
+    const result = await userService.deleteSingleUser(id);
 
     res.json({
       status: 200,
@@ -181,18 +181,76 @@ export const getMe = async (
   next: NextFunction,
 ) => {
   try {
-    const user = (req as any).user;
+    const user = req.user;
     
-    // Fetch full user without password
-    const result = await (userService as any).getSingleUser(user.userId);
-    
-    if (!result) {
+    if (!user) {
       throw new AppError(404, 'User not found');
     }
 
     res.status(200).json({
       success: true,
       message: 'User retrieved successfully',
+      data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const adminGetAllUsers = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await userService.adminGetAllUsers(req.query);
+    res.status(200).json({
+      success: true,
+      message: 'Users retrieved successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const adminGetSingleUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const result = await userService.adminGetSingleUser(id as string);
+    res.status(200).json({
+      success: true,
+      message: 'User retrieved successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const adminUpdateUserStatus = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const adminId = (req as any).user.id;
+
+    const result = await userService.adminUpdateUserStatus(adminId, id as string, status);
+    res.status(200).json({
+      success: true,
+      message: 'User status updated successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const adminUpdateUserRole = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+    const adminId = (req as any).user.id;
+
+    const result = await userService.adminUpdateUserRole(adminId, id as string, role);
+    res.status(200).json({
+      success: true,
+      message: 'User role updated successfully',
       data: result,
     });
   } catch (error) {

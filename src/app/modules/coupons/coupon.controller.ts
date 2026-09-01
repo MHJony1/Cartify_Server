@@ -114,7 +114,7 @@ export const applyCoupon = async (
 ) => {
   try {
     const { code } = req.body;
-    const result = await CouponService.applyCoupon(req.user!.userId, code);
+    const result = await CouponService.applyCoupon(req.user!.id, code);
     res.status(200).json({
       success: true,
       message: "Coupon applied successfully",

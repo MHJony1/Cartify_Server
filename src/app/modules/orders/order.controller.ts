@@ -15,7 +15,7 @@ const createOrder = async (
       return;
     }
 
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const result = await orderService.createOrder(
       userId,
@@ -46,7 +46,7 @@ const getMyOrders = async (
       return;
     }
 
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const result =
       await orderService.getMyOrders(userId);
@@ -75,7 +75,7 @@ const getSingleOrder = async (
       return;
     }
 
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const { id } = req.params;
 
     const result = await orderService.getSingleOrder(
@@ -171,7 +171,7 @@ const cancelOrder = async (
       return;
     }
 
-    const { userId, role } = req.user;
+    const { id: userId, role } = req.user;
     const id = req.params.id as string;
 
     const result = await orderService.cancelOrder(
