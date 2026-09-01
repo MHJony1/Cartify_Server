@@ -185,7 +185,7 @@ export const getProducts = async (
   }
 
   // New Filters
-  if (query.gender) where.gender = query.gender;
+  if (query.gender) where.gender = (query.gender as string).toUpperCase();
   if (query.collection) where.collection = query.collection;
   
   if (query.size || query.color) {
@@ -238,12 +238,17 @@ export const getProducts = async (
 
 
 export const getProductById = async (
-  id: string
+  idOrSlug: string
 ) => {
+  // Try to determine if it's a UUID to prevent Prisma validation errors
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idOrSlug);
+
+  const whereCondition = isUuid 
+    ? { id: idOrSlug } 
+    : { slug: idOrSlug };
+
   const product = await prisma.product.findUnique({
-    where: {
-      id,
-    },
+    where: whereCondition as any,
     include: {
       category: true,
       variants: true,
