@@ -120,10 +120,17 @@ export const getSingleUser = async (req: Request, res: Response) => {
   }
 };
 
-export const updateSingleUser = async (req: Request, res: Response) => {
+export const updateSingleUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = req.params.id as string;
     const userPayload = req.body;
+    
+    // IDOR Protection: Only the user themselves or an ADMIN can update the profile
+    const currentUser = (req as any).user;
+    if (currentUser.role !== 'ADMIN' && currentUser.id !== id) {
+      throw new AppError(403, 'You do not have permission to update this profile');
+    }
+
     const result = await userService.updateSingleUser(id, userPayload);
 
     res.json({
@@ -132,10 +139,7 @@ export const updateSingleUser = async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error: any) {
-    res.status(500).json({
-      status: 500,
-      message: error.message,
-    });
+    next(error);
   }
 };
 
